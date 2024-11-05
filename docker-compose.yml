@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  app:
+    image: sekom_remote_app
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/sekom-bank
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_REDIS_HOST=my_redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      - postgres
+      - redis
+      - prometheus
+    networks:
+      - sekom_network
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres_remote
+    environment:
+      POSTGRES_DB: sekom-bank
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_HOST: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - sekom_network
+
+  redis:
+    image: redis:latest
+    hostname: my_redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - sekom_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus_sekom
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    networks:
+      - sekom_network
+
+networks:
+  sekom_network:
+    driver: bridge
+
