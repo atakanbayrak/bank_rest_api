@@ -1,6 +1,9 @@
 package org.app.sekom_java_api.service.account;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.app.sekom_java_api.configuration.redis.CacheConfig;
 import org.app.sekom_java_api.modal.dto.account.AccountDto;
 import org.app.sekom_java_api.modal.entity.account.Account;
 import org.app.sekom_java_api.modal.entity.account_holder.AccountHolder;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.util.UUID.randomUUID;
+import static org.app.sekom_java_api.configuration.redis.CacheConfig.redisTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -25,15 +29,33 @@ public class AccountService implements IAccountService{
     private final AccountRepository accountRepository;
     private final AccountHolderService accountHolderService;
     private final BankService bankService;
+    private final ObjectMapper objectMapper;
 
 
     @Override
     public DataResult<List<Account>> getAllAccounts() {
-        Optional<List<Account>> accounts = Optional.of(accountRepository.findAll());
-        if(accounts.isPresent()){
-            return new SuccessDataResult<>(accounts.get(), Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Accounts are listed successfully"));
+        String regCached = (String) redisTemplate.opsForValue().get(CacheConfig.ACCOUNT_CACHE_KEY);
+        if(regCached != null)
+        {
+            try{
+                List<Account> accounts = objectMapper.readValue(regCached, new TypeReference<List<Account>>() {});
+                if(accounts.isEmpty())
+                    return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There are no accounts"));
+                return new DataResult<>(accounts, Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Accounts are listed from cache successfully"));
+            }
+            catch(Exception e){
+                return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Error while reading cache"));
+            }
         }
-        return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There is no account"));
+        Optional<List<Account>> accounts = Optional.of(accountRepository.findAll());
+        try{
+            String regJson = objectMapper.writeValueAsString(accounts);
+            redisTemplate.opsForValue().set(CacheConfig.ACCOUNT_CACHE_KEY, regJson);
+        }
+        catch(Exception e){
+            return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Error while reading cache"));
+        }
+        return new SuccessDataResult<>(accounts.get(), Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Accounts are listed successfully"));
     }
 
     @Override
@@ -56,6 +78,7 @@ public class AccountService implements IAccountService{
                     .bank(account.get().getBank())
                     .accountId(account.get().getAccountId())
                     .accountNumber(account.get().getAccountNumber())
+                    .version(account.get().getVersion())
                     .build(), Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Account is found successfully"));
         }
         return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There is no account"));
@@ -67,6 +90,7 @@ public class AccountService implements IAccountService{
         if(account.isPresent()){
             account.get().setAccountName(accountName);
             accountRepository.save(account.get());
+            redisTemplate.delete(CacheConfig.ACCOUNT_CACHE_KEY);
             return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Account is updated successfully");
         }
         return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account is not found");
@@ -77,6 +101,7 @@ public class AccountService implements IAccountService{
         Optional<Account> account = accountRepository.findById(accountId);
         if(account.isPresent()){
             accountRepository.deleteById(accountId);
+            redisTemplate.delete(CacheConfig.ACCOUNT_CACHE_KEY);
             return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Account is deleted successfully");
         }
         return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account is not found");
@@ -104,6 +129,7 @@ public class AccountService implements IAccountService{
                 .bank(bank)
                 .build();
         accountRepository.save(account);
+        redisTemplate.delete(CacheConfig.ACCOUNT_CACHE_KEY);
         return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Account is saved successfully");
     }
 

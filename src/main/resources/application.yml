@@ -1,15 +1,6 @@
 server:
   port: 8082
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "prometheus"  # Prometheus uç noktasını dışa açar
-  endpoint:
-    prometheus:
-      enabled: true  # Prometheus uç noktasını etkinleştirir
-
 spring:
   main:
     allow-circular-references: true
@@ -40,4 +31,26 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}  # Varsayılan olarak localhost, Docker içinde sekom_redis
       port: ${SPRING_REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+  influx:
+    metrics:
+      export:
+        uri: http://influxdb:8086
+        db: spring_metrics
+        auto-create-db: true
+        step: 10s
+  prometheus:
+    metrics:
+      export:
+        step: 10s
+        enabled: true
 

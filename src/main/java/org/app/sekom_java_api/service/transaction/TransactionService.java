@@ -10,6 +10,7 @@ import org.app.sekom_java_api.modal.request.TransactionRequest;
 import org.app.sekom_java_api.repository.transaction.TransactionRepository;
 import org.app.sekom_java_api.results.*;
 import org.app.sekom_java_api.service.account.AccountService;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -63,22 +64,39 @@ public class TransactionService implements ITransactionService{
         AccountDto account = accountService.getAccountByAccountNumber(accountNumber).getData();
         if(account != null){
             if(account.getAccountBalance() >= amount){
-                accountService.updateBalance(accountNumber, account.getAccountBalance() - amount);
-                Result result = saveTransaction(TransactionRequest.builder()
-                        .transactionType("Withdraw")
-                        .transactionAmount(amount)
-                        .transactionDescription("Withdraw from " + accountNumber)
-                        .accountId(account.getAccountId())
-                        .build());
-                if(result.resultMessage.messageType != ResultMessageType.ERROR){
-                    return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Withdraw is successful");
+                try{
+                    updateBalanceWithVersionCheck(accountNumber, account.getAccountBalance() - amount, account.getVersion());
+
+                    //accountService.updateBalance(accountNumber, account.getAccountBalance() - amount);
+                    Result result = saveTransaction(TransactionRequest.builder()
+                            .transactionType("Withdraw")
+                            .transactionAmount(amount)
+                            .transactionDescription("Withdraw from " + accountNumber)
+                            .accountId(account.getAccountId())
+                            .build());
+                    if(result.resultMessage.messageType != ResultMessageType.ERROR){
+                        return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Withdraw is successful");
+                    }
+                    return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Withdraw is not successful");
+                } catch (OptimisticLockingFailureException e) {
+                    return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Concurrent transaction detected, please try again");
                 }
-                return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Withdraw is not successful");
             }
             return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Insufficient balance");
         }
         return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Account is not found");
     }
+
+    public void updateBalanceWithVersionCheck(String accountNumber, Long newBalance, Long version) {
+        AccountDto account = accountService.getAccountByAccountNumber(accountNumber).getData();
+
+        if(account != null && account.getVersion().equals(version)) {
+            accountService.updateBalance(accountNumber, newBalance); // JPA burada otomatik olarak version kontrolü yapar
+        } else {
+            throw new OptimisticLockingFailureException("Version conflict detected");
+        }
+    }
+
 
     @Override
     @Transactional

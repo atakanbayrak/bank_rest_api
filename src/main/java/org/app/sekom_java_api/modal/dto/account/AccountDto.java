@@ -18,4 +18,5 @@ public class AccountDto {
     private Long accountBalance;
     private Bank bank;
     private AccountHolder accountHolder;
+    private Long version;
 }

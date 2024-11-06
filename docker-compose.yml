@@ -2,6 +2,7 @@ version: '3.8'
 services:
   app:
     image: sekom_remote_app
+    hostname: app-sekom
     ports:
       - "8082:8082"
     environment:
@@ -10,12 +11,19 @@ services:
       - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_REDIS_HOST=my_redis
       - SPRING_REDIS_PORT=6379
+      - MANAGEMENT_METRICS_EXPORT_INFLUX_URI=http://influxdb:8086  # InfluxDB bağlantı URL'si
+      - MANAGEMENT_METRICS_EXPORT_INFLUX_DB=spring_metrics  # InfluxDB veritabanı adı
+      - MANAGEMENT_METRICS_EXPORT_INFLUX_AUTO_CREATE_DB=true
+      - MANAGEMENT_METRICS_EXPORT_INFLUX_STEP=10s  # Metrik gönderim sıklığı
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=*
     depends_on:
       - postgres
       - redis
+      - influxdb
       - prometheus
+      - grafana
     networks:
-      - sekom_network
+      - sekom-network
 
   postgres:
     image: postgres:latest
@@ -29,7 +37,7 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - sekom_network
+      - sekom-network
 
   redis:
     image: redis:latest
@@ -38,7 +46,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - sekom_network
+      - sekom-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -48,9 +56,33 @@ services:
     ports:
       - 9090:9090
     networks:
-      - sekom_network
+      - sekom-network
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    ports:
+      - "8086:8086"  # InfluxDB'nin varsayılan portu
+    environment:
+      - INFLUXDB_DB=spring_metrics  # InfluxDB veritabanı adı
+      - INFLUXDB_HTTP_AUTH_ENABLED=false
+    networks:
+      - sekom-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - sekom-network
 
 networks:
-  sekom_network:
+  sekom-network:
     driver: bridge
 
+volumes:
+    grafana_data:
+        driver: local
