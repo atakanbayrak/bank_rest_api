@@ -68,8 +68,10 @@ public class AccountService implements IAccountService{
     }
 
     @Override
-    public DataResult<AccountDto> getAccountByAccountNumber(String username) {
-        Optional<Account> account = accountRepository.findByAccountNumber(username);
+    public DataResult<AccountDto> getAccountByAccountNumber(String accountNumber) {
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank())
+            return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account number cannot be empty"));
+        Optional<Account> account = accountRepository.findByAccountNumber(accountNumber);
         if(account.isPresent()){
             return new SuccessDataResult<>(AccountDto.builder()
                     .accountName(account.get().getAccountName())
@@ -86,6 +88,10 @@ public class AccountService implements IAccountService{
 
     @Override
     public Result updateAccount(String accountNumber, String accountName) {
+        if(accountName == null || accountName.isEmpty() || accountName.isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account name cannot be empty");
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account number cannot be empty");
         Optional<Account> account = accountRepository.findByAccountNumber(accountNumber);
         if(account.isPresent()){
             account.get().setAccountName(accountName);
@@ -109,6 +115,10 @@ public class AccountService implements IAccountService{
 
     @Override
     public Result saveAccount(AccountRequest accountRequest) {
+        Result result = checkConstraints(accountRequest);
+        if(result.resultMessage.messageType == ResultMessageType.ERROR)
+            return result;
+
         AccountHolder accountHolder = accountHolderService.getAccountHolderById(accountRequest.getHolderId()).getData();
         if(accountHolder == null){
             return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder is not found");
@@ -135,6 +145,8 @@ public class AccountService implements IAccountService{
 
     @Override
     public DataResult<Long> getAccountBalance(String accountNumber) {
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank())
+            return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account number cannot be empty"));
         Optional<Account> account = accountRepository.findByAccountNumber(accountNumber);
         if(account.isPresent()){
             return new SuccessDataResult<>(account.get().getAccountBalance(), Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Account balance is: " + account.get().getAccountBalance()));
@@ -144,6 +156,8 @@ public class AccountService implements IAccountService{
 
     @Override
     public Result updateBalance(String accountNumber, Long amount) {
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account number cannot be empty");
         Optional<Account> account = accountRepository.findByAccountNumber(accountNumber);
         if(account.isPresent()){
             account.get().setAccountBalance(amount);
@@ -151,5 +165,15 @@ public class AccountService implements IAccountService{
             return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Balance is updated successfully");
         }
         return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account is not found");
+    }
+
+    private Result checkConstraints(AccountRequest request){
+        if(request.getAccountName() == null || request.getAccountName().isEmpty() || request.getAccountName().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account name is empty");
+        if(request.getBankId() == null || request.getBankId() == 0)
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Bank id is empty");
+        if(request.getHolderId() == null || request.getHolderId() == 0)
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Holder id is empty");
+        return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Constraints are checked successfully");
     }
 }

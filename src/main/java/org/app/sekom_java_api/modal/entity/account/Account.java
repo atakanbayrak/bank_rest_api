@@ -24,7 +24,7 @@ public class Account {
     private Long accountId;
 
     @Version
-    private Long version;
+    private Long version = 0L;
 
     @Column(name = "account_number")
     private String accountNumber;

@@ -12,7 +12,7 @@ public interface IAccountService {
 
     DataResult<List<Account>> getAllAccounts();
     DataResult<Account> getAccountById(Long accountId);
-    DataResult<AccountDto> getAccountByAccountNumber(String username);
+    DataResult<AccountDto> getAccountByAccountNumber(String accountNumber);
     Result updateAccount(String accountNumber, String accountName);
     Result deleteAccount(Long accountId);
     Result saveAccount(AccountRequest accountRequest);

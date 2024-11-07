@@ -22,10 +22,7 @@ public class BankService implements IBankService {
     @Override
     public DataResult<List<Bank>> getAllBanks() {
         Optional<List<Bank>> banks = Optional.of(bankRepository.findAll());
-        if(banks.isPresent()){
-            return new SuccessDataResult<>(banks.get(), Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Banks are listed successfully"));
-        }
-        return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There is no bank"));
+        return new SuccessDataResult<>(banks.get(), Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Banks are listed successfully"));
     }
 
     @Override
@@ -39,6 +36,8 @@ public class BankService implements IBankService {
 
     @Override
     public DataResult<BankDto> getBankByCode(String bankCode) {
+        if(bankCode == null || bankCode.isEmpty() || bankCode.isBlank())
+            return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Bank code cannot be empty"));
         Optional<Bank> bank = bankRepository.findBankByBankCode(bankCode);
         if(bank.isPresent()){
             return new SuccessDataResult<>(BankDto.builder()
@@ -53,6 +52,9 @@ public class BankService implements IBankService {
 
     @Override
     public Result updateBank(Long bankId, BankRequest bankRequest) {
+        Result result = checkConstraints(bankRequest);
+        if(result.resultMessage.messageType == ResultMessageType.ERROR)
+            return result;
         Optional<Bank> bank = bankRepository.findById(bankId);
         if(bank.isPresent()){
             bank.get().setBankName(bankRequest.getBankName());
@@ -76,6 +78,9 @@ public class BankService implements IBankService {
 
     @Override
     public Result saveBank(BankRequest bankRequest) {
+        Result result = checkConstraints(bankRequest);
+        if(result.resultMessage.messageType == ResultMessageType.ERROR)
+            return result;
         Bank bank = Bank.builder()
                 .bankName(bankRequest.getBankName())
                 .bankCode(randomUUID().toString())
@@ -85,5 +90,15 @@ public class BankService implements IBankService {
                 .build();
         bankRepository.save(bank);
         return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Bank is saved successfully");
+    }
+
+    private Result checkConstraints(BankRequest bankRequest) {
+        if(bankRequest.getBankName() == null || bankRequest.getBankName().isEmpty() || bankRequest.getBankName().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Bank name cannot be empty");
+        if(bankRequest.getBankAddress() == null || bankRequest.getBankAddress().isEmpty() || bankRequest.getBankAddress().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Bank address cannot be empty");
+        if(bankRequest.getBankPhoneNumber() == null || bankRequest.getBankPhoneNumber().isEmpty() || bankRequest.getBankPhoneNumber().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Bank phone number cannot be empty");
+        return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Constraints are checked successfully");
     }
 }

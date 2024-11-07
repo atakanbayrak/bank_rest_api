@@ -65,6 +65,8 @@ public class AccountHolderService implements IAccountHolderService {
 
     @Override
     public DataResult<AccountHolderDto> getAccountHolderByIdentityNumber(String identityNumber) {
+        if(identityNumber == null || identityNumber.isEmpty() || identityNumber.isBlank())
+            return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Identity number cannot be empty"));
         Optional<AccountHolder> accountHolder = accountHolderRepository.findAccountHolderByIdentityNumber(identityNumber);
         if(accountHolder.isPresent()){
             return new SuccessDataResult<>(AccountHolderDto.builder()
@@ -81,6 +83,9 @@ public class AccountHolderService implements IAccountHolderService {
 
     @Override
     public Result updateAccountHolder(Long holderId, AccountHolderRequest accountHolderRequest) {
+        Result result = checkConstraints(accountHolderRequest);
+        if(result.resultMessage.messageType == ResultMessageType.ERROR)
+            return result;
         Optional<AccountHolder> accountHolder = accountHolderRepository.findById(holderId);
         if(accountHolder.isPresent()){
             accountHolder.get().setAccountHolderName(accountHolderRequest.getAccountHolderName());
@@ -109,6 +114,11 @@ public class AccountHolderService implements IAccountHolderService {
     @Override
     @CacheEvict(value = CacheConfig.HOLDER_CACHE_KEY, allEntries = true)
     public Result saveAccountHolder(String identityNumber, AccountHolderRequest accountHolderRequest) {
+        if(identityNumber == null || identityNumber.isEmpty() || identityNumber.isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Identity number cannot be empty");
+        Result result = checkConstraints(accountHolderRequest);
+        if(result.resultMessage.messageType == ResultMessageType.ERROR)
+            return result;
         Optional<AccountHolder> accountHolder = accountHolderRepository.findAccountHolderByIdentityNumber(identityNumber);
         if(accountHolder.isPresent()){
             return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder is already exist");
@@ -125,5 +135,19 @@ public class AccountHolderService implements IAccountHolderService {
         accountHolderRepository.save(newAccountHolder);
         redisTemplate.delete(CacheConfig.HOLDER_CACHE_KEY);
         return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Account holder is saved successfully");
+    }
+
+    private Result checkConstraints(AccountHolderRequest accountHolderRequest){
+        if(accountHolderRequest.getAccountHolderName() == null || accountHolderRequest.getAccountHolderName().isEmpty() || accountHolderRequest.getAccountHolderName().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder name is empty");
+        if( accountHolderRequest.getAccountHolderSurname() == null || accountHolderRequest.getAccountHolderSurname().isEmpty() || accountHolderRequest.getAccountHolderSurname().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder surname is empty");
+        if(accountHolderRequest.getAccountHolderAddress() == null || accountHolderRequest.getAccountHolderAddress().isEmpty() || accountHolderRequest.getAccountHolderAddress().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder address is empty");
+        if(accountHolderRequest.getAccountHolderEmail() == null || accountHolderRequest.getAccountHolderEmail().isEmpty() || accountHolderRequest.getAccountHolderEmail().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder email is empty");
+        if(accountHolderRequest.getAccountHolderPhoneNumber() == null || accountHolderRequest.getAccountHolderPhoneNumber().isEmpty() || accountHolderRequest.getAccountHolderPhoneNumber().isBlank())
+            return Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Account holder phone number is empty");
+        return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Constraints are checked successfully");
     }
 }

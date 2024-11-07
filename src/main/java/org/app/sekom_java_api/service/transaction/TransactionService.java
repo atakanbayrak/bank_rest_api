@@ -45,6 +45,9 @@ public class TransactionService implements ITransactionService{
 
     @Override
     public DataResult<TransactionDto> getTransactionByCode(String code) {
+        if(code == null || code.isEmpty() || code.isBlank()){
+            return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Transaction code is invalid"));
+        }
         Optional<Transaction> transaction = transactionRepository.findTransactionByTransactionCode(code);
         if(transaction.isPresent()){
             return new SuccessDataResult<>(TransactionDto.builder()
@@ -60,6 +63,9 @@ public class TransactionService implements ITransactionService{
     @Override
     @Transactional
     public Result withdraw(String accountNumber, Long amount) {
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank()){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Account number is invalid");
+        }
         AccountDto account = accountService.getAccountByAccountNumber(accountNumber).getData();
         if(account != null){
             if(account.getAccountBalance() >= amount){
@@ -87,6 +93,9 @@ public class TransactionService implements ITransactionService{
     }
 
     public void updateBalanceWithVersionCheck(String accountNumber, Long newBalance, Long version) {
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank()){
+            throw new IllegalArgumentException("Account number is invalid");
+        }
         AccountDto account = accountService.getAccountByAccountNumber(accountNumber).getData();
 
         if(account != null && account.getVersion().equals(version)) {
@@ -100,6 +109,9 @@ public class TransactionService implements ITransactionService{
     @Override
     @Transactional
     public Result deposit(String accountNumber, Long amount) {
+        if(accountNumber == null || accountNumber.isEmpty() || accountNumber.isBlank()){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Account number is invalid");
+        }
         AccountDto account = accountService.getAccountByAccountNumber(accountNumber).getData();
         if(account != null){
             accountService.updateBalance(accountNumber, account.getAccountBalance() + amount);
@@ -120,6 +132,12 @@ public class TransactionService implements ITransactionService{
     @Override
     @Transactional
     public Result transfer(String fromAccountNumber, String toAccountNumber, Long amount) {
+        if(fromAccountNumber == null || fromAccountNumber.isEmpty() || fromAccountNumber.isBlank()){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "From account number is invalid");
+        }
+        if(toAccountNumber == null || toAccountNumber.isEmpty() || toAccountNumber.isBlank()){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "To account number is invalid");
+        }
         AccountDto fromAccount = accountService.getAccountByAccountNumber(fromAccountNumber).getData();
         AccountDto toAccount = accountService.getAccountByAccountNumber(toAccountNumber).getData();
         if(fromAccount != null && toAccount != null){
@@ -132,7 +150,14 @@ public class TransactionService implements ITransactionService{
                         .transactionDescription("Transfer from " + fromAccountNumber + " to " + toAccountNumber)
                         .accountId(fromAccount.getAccountId())
                         .build());
-                if(result.resultMessage.messageType != ResultMessageType.ERROR){
+
+                Result result2 = saveTransaction(TransactionRequest.builder()
+                        .transactionType("Transfer")
+                        .transactionAmount(amount)
+                        .transactionDescription("Recieved transfer from " + fromAccountNumber + " to " + toAccountNumber)
+                        .accountId(toAccount.getAccountId())
+                        .build());
+                if(result.resultMessage.messageType != ResultMessageType.ERROR && result2.resultMessage.messageType != ResultMessageType.ERROR){
                     return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transfer is successful");
                 }
                 return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transfer is not successful because of transaction error");
@@ -144,6 +169,9 @@ public class TransactionService implements ITransactionService{
 
     @Override
     public Result saveTransaction(TransactionRequest transactionRequest) {
+        Result result = checkConstraints(transactionRequest);
+        if(result.resultMessage.messageType == ResultMessageType.ERROR)
+            return result;
         Optional<Account> account = Optional.ofNullable(accountService.getAccountById(transactionRequest.getAccountId()).getData());
         if(account.isPresent()){
             Transaction transaction = Transaction.builder()
@@ -172,5 +200,18 @@ public class TransactionService implements ITransactionService{
             return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There is no transaction"));
         }
         return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Account is not found"));
+    }
+
+    private Result checkConstraints(TransactionRequest transactionRequest){
+        if(transactionRequest.getTransactionAmount() == null || transactionRequest.getTransactionAmount() <= 0){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Transaction amount is invalid");
+        }
+        if(transactionRequest.getTransactionType() == null || transactionRequest.getTransactionType().isEmpty() || transactionRequest.getTransactionType().isBlank()){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Transaction type is invalid");
+        }
+        if(transactionRequest.getTransactionDescription() == null || transactionRequest.getTransactionDescription().isEmpty() || transactionRequest.getTransactionDescription().isBlank()){
+            return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Transaction description is invalid");
+        }
+        return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transaction is valid");
     }
 }

@@ -17,5 +17,4 @@ public class AccountHolderDto {
     private String accountHolderPhoneNumber;
     private String accountHolderAddress;
     private String identityNumber;
-    private List<Account> accounts;
 }
