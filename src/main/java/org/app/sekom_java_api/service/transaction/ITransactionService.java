@@ -1,11 +1,8 @@
 package org.app.sekom_java_api.service.transaction;
 
 
-import org.app.sekom_java_api.modal.dto.account.AccountDto;
 import org.app.sekom_java_api.modal.dto.transaction.TransactionDto;
-import org.app.sekom_java_api.modal.entity.account.Account;
 import org.app.sekom_java_api.modal.entity.transaction.Transaction;
-import org.app.sekom_java_api.modal.request.AccountRequest;
 import org.app.sekom_java_api.modal.request.TransactionRequest;
 import org.app.sekom_java_api.results.DataResult;
 import org.app.sekom_java_api.results.Result;

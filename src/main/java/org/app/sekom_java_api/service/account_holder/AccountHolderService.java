@@ -1,18 +1,14 @@
 package org.app.sekom_java_api.service.account_holder;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.app.sekom_java_api.configuration.redis.CacheConfig;
-import org.app.sekom_java_api.modal.dto.account.AccountDto;
+
 import org.app.sekom_java_api.modal.dto.account_holder.AccountHolderDto;
 import org.app.sekom_java_api.modal.entity.account_holder.AccountHolder;
 import org.app.sekom_java_api.modal.request.AccountHolderRequest;
 import org.app.sekom_java_api.repository.account_holder.AccountHolderRepository;
 import org.app.sekom_java_api.results.*;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;

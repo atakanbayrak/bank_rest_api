@@ -12,7 +12,6 @@ import org.app.sekom_java_api.results.*;
 import org.app.sekom_java_api.service.account.AccountService;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

@@ -26,7 +26,6 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-
   data:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}  # Varsayılan olarak localhost, Docker içinde sekom_redis
@@ -41,13 +40,6 @@ management:
     tags:
       application: ${spring.application.name}
 
-  influx:
-    metrics:
-      export:
-        uri: http://influxdb:8086
-        db: spring_metrics
-        auto-create-db: true
-        step: 10s
   prometheus:
     metrics:
       export:

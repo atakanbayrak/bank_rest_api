@@ -1,6 +1,7 @@
 package org.app.sekom_java_api.controller.account;
 
 import lombok.RequiredArgsConstructor;
+import org.app.sekom_java_api.configuration.prometheus.PrometheusService;
 import org.app.sekom_java_api.modal.dto.account.AccountDto;
 import org.app.sekom_java_api.modal.entity.account.Account;
 import org.app.sekom_java_api.modal.request.AccountRequest;
@@ -17,9 +18,11 @@ import java.util.List;
 public class AccountController {
 
     private final AccountService accountService;
+    private final PrometheusService prometheusService;
 
     @GetMapping(path = "getAllAccounts")
     public DataResult<List<Account>> getAllAccounts() {
+        prometheusService.incrementCustomCounter();
         return accountService.getAllAccounts();
     }
 

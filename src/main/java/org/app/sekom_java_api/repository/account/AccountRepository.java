@@ -1,7 +1,6 @@
 package org.app.sekom_java_api.repository.account;
 
 import org.app.sekom_java_api.modal.entity.account.Account;
-import org.app.sekom_java_api.results.DataResult;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
