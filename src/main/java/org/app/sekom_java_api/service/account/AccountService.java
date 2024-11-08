@@ -40,7 +40,7 @@ public class AccountService implements IAccountService{
             try{
                 List<Account> accounts = objectMapper.readValue(regCached, new TypeReference<List<Account>>() {});
                 if(accounts.isEmpty())
-                    return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There are no accounts"));
+                    return new ErrorDataResult<>(Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "There are no accounts received from cache"));
                 return new DataResult<>(accounts, Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Accounts are listed from cache successfully"));
             }
             catch(Exception e){
