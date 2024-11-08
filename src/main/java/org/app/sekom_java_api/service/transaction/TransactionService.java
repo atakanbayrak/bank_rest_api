@@ -114,17 +114,21 @@ public class TransactionService implements ITransactionService{
         }
         AccountDto account = accountService.getAccountByAccountNumber(accountNumber).getData();
         if(account != null){
-            accountService.updateBalance(accountNumber, account.getAccountBalance() + amount);
-            Result result = saveTransaction(TransactionRequest.builder()
-                    .transactionType("Deposit")
-                    .transactionAmount(amount)
-                    .transactionDescription("Deposit to " + accountNumber)
-                    .accountId(account.getAccountId())
-                    .build());
-            if(result.resultMessage.messageType != ResultMessageType.ERROR){
-                return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Deposit is successful");
+            try {
+                updateBalanceWithVersionCheck(accountNumber, account.getAccountBalance() + amount, account.getVersion());
+                Result result = saveTransaction(TransactionRequest.builder()
+                        .transactionType("Deposit")
+                        .transactionAmount(amount)
+                        .transactionDescription("Deposit to " + accountNumber)
+                        .accountId(account.getAccountId())
+                        .build());
+                if(result.resultMessage.messageType != ResultMessageType.ERROR){
+                    return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Deposit is successful");
+                }
+                return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Deposit is not successful because of transaction error");
+            } catch (OptimisticLockingFailureException e) {
+                return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Concurrent transaction detected, please try again");
             }
-            return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Deposit is not successful because of transaction error");
         }
         return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Account is not found");
     }
@@ -142,25 +146,31 @@ public class TransactionService implements ITransactionService{
         AccountDto toAccount = accountService.getAccountByAccountNumber(toAccountNumber).getData();
         if(fromAccount != null && toAccount != null){
             if(fromAccount.getAccountBalance() >= amount){
-                accountService.updateBalance(fromAccountNumber, fromAccount.getAccountBalance() - amount);
-                accountService.updateBalance(toAccountNumber, toAccount.getAccountBalance() + amount);
-                Result result = saveTransaction(TransactionRequest.builder()
-                        .transactionType("Transfer")
-                        .transactionAmount(amount)
-                        .transactionDescription("Transfer from " + fromAccountNumber + " to " + toAccountNumber)
-                        .accountId(fromAccount.getAccountId())
-                        .build());
+                try{
+                    updateBalanceWithVersionCheck(fromAccountNumber, fromAccount.getAccountBalance() - amount, fromAccount.getVersion());
+                    updateBalanceWithVersionCheck(toAccountNumber, toAccount.getAccountBalance() + amount, toAccount.getVersion());
+                    Result result = saveTransaction(TransactionRequest.builder()
+                            .transactionType("Transfer")
+                            .transactionAmount(amount)
+                            .transactionDescription("Transfer from " + fromAccountNumber + " to " + toAccountNumber)
+                            .accountId(fromAccount.getAccountId())
+                            .build());
 
-                Result result2 = saveTransaction(TransactionRequest.builder()
-                        .transactionType("Transfer")
-                        .transactionAmount(amount)
-                        .transactionDescription("Recieved transfer from " + fromAccountNumber + " to " + toAccountNumber)
-                        .accountId(toAccount.getAccountId())
-                        .build());
-                if(result.resultMessage.messageType != ResultMessageType.ERROR && result2.resultMessage.messageType != ResultMessageType.ERROR){
-                    return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transfer is successful");
+                    Result result2 = saveTransaction(TransactionRequest.builder()
+                            .transactionType("Transfer")
+                            .transactionAmount(amount)
+                            .transactionDescription("Recieved transfer from " + fromAccountNumber + " to " + toAccountNumber)
+                            .accountId(toAccount.getAccountId())
+                            .build());
+                    if(result.resultMessage.messageType != ResultMessageType.ERROR && result2.resultMessage.messageType != ResultMessageType.ERROR){
+                        return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transfer is successful");
+                    }
+                    return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transfer is not successful because of transaction error");
+                } catch (OptimisticLockingFailureException e) {
+                    return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Concurrent transaction detected, please try again");
                 }
-                return Result.showMessage(Result.SUCCESS, ResultMessageType.SUCCESS, "Transfer is not successful because of transaction error");
+                //accountService.updateBalance(fromAccountNumber, fromAccount.getAccountBalance() - amount);
+                //accountService.updateBalance(toAccountNumber, toAccount.getAccountBalance() + amount);
             }
             return Result.showMessage(Result.SUCCESS_EMPTY, ResultMessageType.ERROR, "Insufficient balance");
         }
