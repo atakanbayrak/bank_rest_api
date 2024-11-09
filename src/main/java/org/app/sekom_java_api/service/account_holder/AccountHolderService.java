@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +47,7 @@ public class AccountHolderService implements IAccountHolderService {
         Optional<List<AccountHolder>> accountHolders = Optional.of(accountHolderRepository.findAll());
         try{
             String regJson = objectMapper.writeValueAsString(accountHolders);
-            redisTemplate.opsForValue().set(CacheConfig.HOLDER_CACHE_KEY, regJson);
+            redisTemplate.opsForValue().set(CacheConfig.HOLDER_CACHE_KEY, regJson, Duration.ofMinutes(10));
         }
         catch(Exception e){
             return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Error while reading cache"));

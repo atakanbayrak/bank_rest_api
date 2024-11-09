@@ -80,6 +80,7 @@ public class CacheConfig {
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+
         CacheConfig.redisTemplate = redisTemplate;
         return redisTemplate;
     }

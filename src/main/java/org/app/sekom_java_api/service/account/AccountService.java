@@ -15,6 +15,7 @@ import org.app.sekom_java_api.service.account_holder.AccountHolderService;
 import org.app.sekom_java_api.service.bank.BankService;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -50,7 +51,7 @@ public class AccountService implements IAccountService{
         Optional<List<Account>> accounts = Optional.of(accountRepository.findAll());
         try{
             String regJson = objectMapper.writeValueAsString(accounts);
-            redisTemplate.opsForValue().set(CacheConfig.ACCOUNT_CACHE_KEY, regJson);
+            redisTemplate.opsForValue().set(CacheConfig.ACCOUNT_CACHE_KEY, regJson, Duration.ofMinutes(10));
         }
         catch(Exception e){
             return new ErrorDataResult<>(Result.showMessage(Result.SERVER_ERROR, ResultMessageType.ERROR, "Error while reading cache"));
